@@ -60,7 +60,7 @@ module I18n::CsvTranslation
         if values.is_a?(Hash)
           result.merge! flat_translation_hash(values, current_key)
         else
-          result[current_key.join(".")] = values
+          result[current_key.join(".")] = values.gsub("\n", "\\n")
         end
       end
 
@@ -72,7 +72,7 @@ module I18n::CsvTranslation
     end
 
     def output_filename file, old_locale
-      File.basename(file).gsub("#{old_locale}.", "")
+      file.gsub("#{@path.to_s}/", '').gsub(".yml", "")
     end
 
     def yml_locale yml
