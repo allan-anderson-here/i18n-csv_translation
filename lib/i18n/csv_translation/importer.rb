@@ -37,7 +37,7 @@ module I18n::CsvTranslation
     def save_translations_as_yaml translations
       translations.each do |key, value|
         unless key.nil?
-          filename = Pathname.new(@path).join("#{@new_locale}." + Pathname.new(key).basename.to_s)
+          filename = Pathname.new(@path).join("#{key}.yml")
           file = File.open(filename, "w")
 
           hash = {}
