@@ -10,10 +10,11 @@ module I18n
         @col_sep = col_sep
       end
 
-      def export(path:, output:, files: '*.yml', &block)
+      def export(path:, output:, files: '*.yml', exclude_keys: [], &block)
         @path   = path
         @files  = files
         @output = output
+        @exclude_keys = exclude_keys
 
         translations = load_translations_into_hash(&block)
         save_translations_to_csv translations
@@ -45,6 +46,7 @@ module I18n
           translations.each do |key, value|
             if value.is_a?(Hash)
               value.each do |inner_key, inner_value|
+                next if @exclude_keys.detect{|key_to_exclude| inner_key.include?(key_to_exclude)}
                 csv << [key, inner_key, inner_value]
               end
             else
@@ -63,7 +65,7 @@ module I18n
           if values.is_a?(Hash)
             result.merge! flat_translation_hash(values, current_key)
           else
-            result[current_key.join('.')] = values.gsub("\n", '\\n')
+            result[current_key.join('.')] = values
           end
         end
 
@@ -74,8 +76,8 @@ module I18n
         Pathname.new(File.dirname(__FILE__))
       end
 
-      def output_filename(file, _old_locale)
-        file.gsub("#{@path}/", '').gsub('.yml', '')
+      def output_filename(file, old_locale)
+        File.basename(file).gsub("#{old_locale}.", "")
       end
 
       def yml_locale(yml)
