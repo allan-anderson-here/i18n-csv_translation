@@ -10,11 +10,13 @@ module I18n
         @col_sep = col_sep
       end
 
-      def export(path:, output:, files: '*.yml', exclude_keys: [], &block)
+      def export(path:, output:, files: '*.yml', exclude_keys: [], reference_language: '', target_language: '',  &block)
         @path   = path
         @files  = files
         @output = output
         @exclude_keys = exclude_keys
+        @reference_language = reference_language
+        @target_language = target_language
 
         translations = load_translations_into_hash(&block)
         save_translations_to_csv translations
@@ -33,6 +35,12 @@ module I18n
                          end
 
           if process_file
+            existing_file = file.gsub(".#{@reference_language}.", ".#{@target_language}.")
+            if File.file?(existing_file)
+              existing_target_ymls = YAML.load_file existing_file
+              translations.merge! "#{output_filename(existing_file, yml_locale(existing_target_ymls))}_existing" => flat_translation_hash(existing_target_ymls.values.first)
+            end
+            next if file.include?(".#{@target_language}.") #File is already imported as _existing
             ymls = YAML.load_file file
             translations.merge! output_filename(file, yml_locale(ymls)) => flat_translation_hash(ymls.values.first)
           end
@@ -44,10 +52,16 @@ module I18n
       def save_translations_to_csv(translations)
         CSV.open(@output, 'w', col_sep: @col_sep) do |csv|
           translations.each do |key, value|
+            next if key.include?('_existing')
+            existing_translations = translations[key + '_existing']
             if value.is_a?(Hash)
               value.each do |inner_key, inner_value|
                 next if @exclude_keys.detect{|key_to_exclude| inner_key.include?(key_to_exclude)}
-                csv << [key, inner_key, inner_value]
+                if existing_translations && existing_translations[inner_key].present?
+                  csv << [key, inner_key, inner_value, existing_translations[inner_key]]
+                else
+                  csv << [key, inner_key, inner_value, nil]
+                end
               end
             else
               csv << [key, value]
